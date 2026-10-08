@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c1118">
+  <title>Pseudo-LiDAR Lab — Demo thị giác máy tính</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Pseudo-LiDAR Lab trang chủ">
+        <span class="brand-mark"><i></i><i></i><i></i><i></i></span>
+        <span>PSEUDO<span class="brand-light">/</span>LAB</span>
+      </a>
+      <div class="topbar-right">
+        <span class="local-pill"><span class="live-dot"></span> XỬ LÝ CỤC BỘ</span>
+        <span class="cpu-pill">CPU · OpenCV</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow"><span class="eyebrow-line"></span> NHẬP MÔN XỬ LÝ ẢNH · STEREO VISION</p>
+          <h1>Từ ảnh stereo<br><span>đến không gian 3D.</span></h1>
+          <p class="hero-copy">Khám phá cách một cặp ảnh trái–phải biến thành bản đồ độ sâu và đám mây điểm pseudo-LiDAR — không cần GPU, không cần mô hình học sâu.</p>
+          <div class="paper-ref"><span class="paper-icon">↗</span> Ý tưởng từ <em>“Pseudo-LiDAR from Visual Depth Estimation”</em> · arXiv:1812.07179</div>
+        </div>
+        <div class="hero-graphic" aria-hidden="true">
+          <div class="hero-grid"></div>
+          <div class="hero-scan"></div>
+          <div class="hero-cross cross-one"></div><div class="hero-cross cross-two"></div>
+          <div class="hero-tag tag-left">STEREO INPUT <b>02×</b></div>
+          <div class="hero-tag tag-right">3D SPACE <b>XYZ</b></div>
+          <div class="hero-coord coord-x">X</div><div class="hero-coord coord-y">Y</div><div class="hero-coord coord-z">Z</div>
+          <div class="hero-center"><span>→</span></div>
+          <div class="hero-caption">DEPTH IS THE MISSING DIMENSION</div>
+        </div>
+      </section>
+
+      <div class="layout">
+        <aside class="control-column">
+          <section class="panel input-panel">
+            <div class="panel-heading">
+              <div><span class="section-index">01 / INPUT</span><h2>Dữ liệu đầu vào</h2></div>
+              <span class="step-state" id="inputState">CHƯA CÓ ẢNH</span>
+            </div>
+            <button class="sample-button" id="sampleButton" type="button">
+              <span class="sample-icon">✳</span><span><b>Dùng bộ ảnh mẫu</b><small>Đọc trực tiếp từ thư mục data/</small></span><span class="button-arrow">↗</span>
+            </button>
+            <div class="or-divider"><span>hoặc tải lên cặp ảnh của bạn</span></div>
+            <div class="upload-grid">
+              <label class="upload-card" for="leftFile">
+                <input id="leftFile" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg">
+                <span class="upload-camera">L</span><b>Ảnh trái</b><small>image_2 · PNG/JPG</small>
+                <span class="upload-name" id="leftName">Chọn tệp ảnh</span>
+              </label>
+              <label class="upload-card" for="rightFile">
+                <input id="rightFile" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg">
+                <span class="upload-camera">R</span><b>Ảnh phải</b><small>image_3 · PNG/JPG</small>
+                <span class="upload-name" id="rightName">Chọn tệp ảnh</span>
+              </label>
+            </div>
+            <label class="calib-upload" for="calibFile">
+              <span class="calib-icon">⌗</span><span><b>Calibration camera</b><small id="calibName">Tải calib_cam_to_cam.txt · không bắt buộc nếu nhập tay</small></span>
+              <span class="calib-choose">CHỌN TỆP</span>
+              <input id="calibFile" type="file" accept=".txt,text/plain">
+            </label>
+            <div class="preview-pair" id="previewPair" hidden>
+              <div><img id="leftPreview" alt="Xem trước ảnh trái"><span>TRÁI</span></div>
+              <div><img id="rightPreview" alt="Xem trước ảnh phải"><span>PHẢI</span></div>
+            </div>
+          </section>
+
+          <section class="panel camera-panel">
+            <div class="panel-heading">
+              <div><span class="section-index">02 / CALIBRATION</span><h2>Thông số camera</h2></div>
+              <span class="edit-label">CÓ THỂ CHỈNH SỬA</span>
+            </div>
+            <div class="calib-notice" id="calibNotice"><span>i</span><p>Thông số quyết định độ sâu thực tế. Nạp calibration để điền tự động hoặc nhập giá trị của camera.</p></div>
+            <div class="field-grid">
+              <label class="field"><span>TIÊU CỰ <i>fx</i></span><div><input id="fx" type="number" step="any" value="721.5377"><em>px</em></div></label>
+              <label class="field"><span>TIÊU CỰ <i>fy</i></span><div><input id="fy" type="number" step="any" value="721.5377"><em>px</em></div></label>
+              <label class="field"><span>TÂM ẢNH <i>cx</i></span><div><input id="cx" type="number" step="any" value="609.5593"><em>px</em></div></label>
+              <label class="field"><span>TÂM ẢNH <i>cy</i></span><div><input id="cy" type="number" step="any" value="172.854"><em>px</em></div></label>
+              <label class="field field-wide"><span>KHOẢNG CÁCH HAI CAMERA <i>baseline</i></span><div><input id="baseline" type="number" step="0.001" value="0.54"><em>m</em></div></label>
+            </div>
+            <div class="field-range">
+              <div class="range-heading"><label for="scale">TỈ LỆ XỬ LÝ</label><output id="scaleValue">0.75×</output></div>
+              <input id="scale" type="range" min="0.25" max="1" step="0.05" value="0.75">
+              <div class="range-ends"><span>NHẸ HƠN</span><span>CHI TIẾT HƠN</span></div>
+            </div>
+            <div class="field-range depth-range">
+              <div class="range-heading"><label for="maxDepth">GIỚI HẠN HIỂN THỊ ĐỘ SÂU</label><output id="depthValue">80 m</output></div>
+              <input id="maxDepth" type="range" min="20" max="120" step="5" value="80">
+              <div class="range-ends"><span>20 M</span><span>120 M</span></div>
+            </div>
+            <button id="runButton" class="run-button" type="button">
+              <span class="run-symbol">▶</span><span class="run-label">CHẠY DEMO</span><span class="run-key">CPU · SGBM</span>
+            </button>
+            <p class="run-hint">Chạy hoàn toàn trên máy này · ảnh không được tải lên Internet</p>
+          </section>
+
+          <section class="pipeline-card">
+            <div class="pipeline-title"><span>QUY TRÌNH XỬ LÝ</span><span>6 BƯỚC</span></div>
+            <div class="pipeline-step active" data-step="0"><span class="step-number">01</span><span class="step-copy"><b>Ảnh stereo</b><small>Hai góc nhìn đã rectify</small></span><span class="step-check">✓</span></div>
+            <div class="pipeline-step" data-step="1"><span class="step-number">02</span><span class="step-copy"><b>Disparity</b><small>StereoSGBM · OpenCV</small></span><span class="step-check">✓</span></div>
+            <div class="pipeline-step" data-step="2"><span class="step-number">03</span><span class="step-copy"><b>Độ sâu</b><small>z = fx × baseline / d</small></span><span class="step-check">✓</span></div>
+            <div class="pipeline-step" data-step="3"><span class="step-number">04</span><span class="step-copy"><b>Pseudo-LiDAR</b><small>Chiếu pixel thành điểm 3D</small></span><span class="step-check">✓</span></div>
+            <div class="pipeline-step" data-step="4"><span class="step-number">05</span><span class="step-copy"><b>Góc nhìn BEV</b><small>Bird’s-Eye View</small></span><span class="step-check">✓</span></div>
+            <div class="pipeline-step" data-step="5"><span class="step-number">06</span><span class="step-copy"><b>Đánh giá sai số</b><small>Độ sâu & kích thước vật thể</small></span><span class="step-check">✓</span></div>
+          </section>
+        </aside>
+
+        <section class="results-column">
+          <section class="results-intro">
+            <div><span class="section-index">03 / OUTPUT</span><h2>Kết quả trực quan</h2></div>
+            <span class="result-status" id="resultStatus"><span class="status-dot"></span> SẴN SÀNG</span>
+          </section>
+
+          <section class="empty-state" id="emptyState">
+            <div class="empty-art"><div class="empty-frame frame-a"></div><div class="empty-frame frame-b"></div><div class="empty-depth">3D</div><span class="empty-ray ray-a"></span><span class="empty-ray ray-b"></span><span class="empty-ray ray-c"></span></div>
+            <div class="empty-kicker">CHƯA CÓ KẾT QUẢ</div>
+            <h3>Một cặp ảnh.<br><span>Một thế giới có chiều sâu.</span></h3>
+            <p>Chọn bộ ảnh mẫu hoặc tải cặp ảnh stereo của bạn lên, sau đó nhấn <b>Chạy demo</b> để bắt đầu.</p>
+            <div class="empty-steps"><span>01 <b>Ảnh trái + phải</b></span><i>→</i><span>02 <b>Disparity</b></span><i>→</i><span>03 <b>Không gian 3D</b></span></div>
+          </section>
+
+          <div id="results" hidden>
+            <section class="metrics-grid">
+              <article class="metric-card metric-highlight"><span class="metric-label">ĐIỂM PSEUDO-LIDAR</span><strong id="metricPoints">—</strong><span class="metric-foot">điểm 3D được tái tạo</span><span class="metric-decoration">···</span></article>
+              <article class="metric-card"><span class="metric-label">DISPARITY HỢP LỆ</span><strong id="metricValid">—<small>%</small></strong><span class="metric-foot">pixel có chiều sâu</span><span class="metric-bar"><i id="validBar"></i></span></article>
+              <article class="metric-card"><span class="metric-label">ĐỘ SÂU TRUNG VỊ</span><strong id="metricDepth">—<small>m</small></strong><span class="metric-foot">trên các pixel hợp lệ</span></article>
+              <article class="metric-card"><span class="metric-label">THỜI GIAN XỬ LÝ</span><strong id="metricTime">—<small>s</small></strong><span class="metric-foot">xử lý CPU trên máy này</span></article>
+            </section>
+            <div class="calculation-strip" id="calculationStrip"></div>
+            <div class="warning-banner" id="runWarning" hidden></div>
+            <section class="visual-panel">
+              <div class="visual-heading"><div><span class="section-index">KHÔNG GIAN 3D</span><h3>Đám mây điểm màu</h3></div><a class="download-link" id="plyDownload" href="#" download>↓ TẢI POINT CLOUD .PLY</a></div>
+              <div class="cloud-wrap"><canvas id="cloudCanvas" aria-label="Đám mây điểm pseudo-LiDAR tương tác"></canvas><div class="cloud-overlay"><span>KÉO CHUỘT ĐỂ XOAY</span><span>CUỘN ĐỂ PHÓNG TO</span></div><div class="cloud-count" id="cloudCount">0 ĐIỂM HIỂN THỊ</div></div>
+              <div class="cloud-legend"><span><i class="legend-near"></i> GẦN</span><span><i class="legend-far"></i> XA</span><span>Đỏ → xanh theo khoảng cách</span></div>
+            </section>
+
+            <section class="visual-panel gallery-panel">
+              <div class="visual-heading"><div><span class="section-index">BẢN ĐỒ & PHÂN TÍCH</span><h3>Các bước của pipeline</h3></div><span class="gallery-note">NHẤN ẢNH ĐỂ PHÓNG TO</span></div>
+              <div class="gallery-grid" id="gallery"></div>
+            </section>
+            <section class="timing-panel"><div class="visual-heading"><div><span class="section-index">HIỆU NĂNG</span><h3>Thời gian từng bước</h3></div><span class="gallery-note">GIÂY · CPU</span></div><div id="timingList" class="timing-list"></div></section>
+          </div>
+          <div id="errorBox" class="error-box" hidden role="alert"></div>
+          <div id="lightbox" class="lightbox" hidden><button type="button" id="closeLightbox" aria-label="Đóng">×</button><img id="lightboxImage" alt="Ảnh kết quả phóng to"><span id="lightboxCaption"></span></div>
+        </section>
+      </div>
+      <footer class="footer"><span>PSEUDO/LAB <i>·</i> DEMO GIÁO DỤC</span><span>KHÔNG DEEP LEARNING <i>·</i> KHÔNG GPU <i>·</i> XỬ LÝ ẢNH CỔ ĐIỂN</span></footer>
+    </main>
+  </div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
